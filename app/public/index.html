@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title>Weather ForeCast</title>
+    <style>
+        button {
+            margin-top: 10px
+        }
+
+        table {
+            border-collapse: collapse;
+            border: 1px solid black;
+        }
+
+        img {
+            width: 40px;
+            height: 40px;
+            vertical-align: middle
+        }
+
+        td {
+            border: 1px solid black;
+            vertical-align: middle;
+            text-align: center;
+        }
+
+        th {
+            border: 1px solid black;
+            padding-left: 35px;
+            padding-right: 35px;
+        }
+
+        .icon {
+            width: 5px;
+            height: 5px;
+        }
+
+        #status {
+            margin-top: 15px;
+            margin-bottom: 5px
+        }
+    </style>
+</head>
+
+<body>
+
+    <div>
+        <label for="zip">Zip code:</label>
+        <input id="zip" type="number" value="19104">
+    </div>
+
+    <button id="send">Send request</button>
+    <div id="status"></div>
+
+    <table>
+        <tr>
+            <thead>
+                <th>Date</th>
+                <th>Forecast</th>
+                <th>Temperature</th>
+            </thead>
+            <tbody id="table">
+
+            </tbody>
+        </tr>
+    </table>
+
+    <script>
+
+        // gets zip code from input field, stores in global variable "zip"
+        let zip;
+        let zipInput = document.getElementById("zip");
+        let table = document.getElementById("table");
+        let statusPrint = document.getElementById("status")
+
+        // Converts Kelvin into Fahrenheit
+        function tempConvert(temp) {
+            return (temp * 9 / 5) - 459.67
+        }
+
+        function clearTable() {
+            table.querySelectorAll('*').forEach(n => n.remove());
+        }
+
+        function clearError() {
+            while (statusPrint.firstChild) {
+                statusPrint.removeChild(statusPrint.firstChild);
+            }
+        }
+
+        function addZero(i) {
+            if (i < 10) {
+                i = "0" + i;
+            }
+            return i;
+        }
+
+        function formatDate(date) {
+            let d = new Date(date)
+            let days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+            let months = ["January", "February", "March", "April", "May", "June", "July",
+                "August", "September", "October", "November", "December"];
+            let time;
+            if (d.getHours() >= 12) {
+                time = (24 - parseInt(d.getHours())) + ":" + addZero(d.getMinutes()) + " PM"
+            }
+            else {
+                time = d.getHours() + ":" + addZero(d.getMinutes()) + " AM"
+            }
+            formatted = days[d.getDay()] + ", " + d.getDate() + " " + months[d.getMonth()] + " " + d.getFullYear() + " @ " + time
+            return formatted
+        }
+
+        let sendButton = document.getElementById("send");
+        sendButton.addEventListener("click", function () {
+            clearError()
+            clearTable()
+            zip = parseInt(zipInput.value);
+            let url = `/forecast?zip=${zip}`; // ADD ZIP TO QUERY STRING HERE
+            fetch(url).then(function (response) {
+                let status = response.status
+                return response.json();
+            }).then(function (data) {
+                if (!(data.hasOwnProperty("error"))) {
+                    console.log("client received from server:");
+                    clearError()
+                    let p = document.createTextNode("Five day forecast for: " + data[0].city)
+                    statusPrint.appendChild(p)
+                    for (var obj in data) {
+                        weatherIcon = data[obj].icon
+                        let currForecast = data[obj]
+                        let date = currForecast.date
+                        let description = currForecast.description
+                        let temp = tempConvert(currForecast.temp)
+                        row = table.insertRow()
+                        dateCell = row.insertCell()
+                        dateCell.textContent = formatDate(date)
+                        descriptionCell = row.insertCell()
+                        descriptionCell.textContent = description
+                        tempCell = row.insertCell()
+                        tempCell.textContent = temp.toFixed(1) + "℉"
+                        span = document.createElement('span')
+                        icon = document.createElement('img')
+                        icon.src = `http://openweathermap.org/img/wn/${weatherIcon}@2x.png`
+                        span.appendChild(icon)
+                        tempCell.appendChild(span)
+                    }
+                }
+                else {
+                    clearTable()
+                    let p = document.createTextNode(data.error)
+                    statusPrint.appendChild(p)
+                }
+            });
+        });
+    </script>
+
+</body>
+
+</html>
